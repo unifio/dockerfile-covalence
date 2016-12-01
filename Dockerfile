@@ -10,7 +10,7 @@ ARG GEMFURY_SOURCE_URL_TOKEN
 RUN mkdir -p /usr/local/external_bins && \
 
     # docker base goodies
-    apk add --no-cache --update ca-certificates gnupg openssl git wget unzip && \
+    apk add --no-cache --update ca-certificates gnupg openssl git wget unzip lxc iptables && \
     gpg --recv-keys 91A6E7F85D05C65630BEF18951852D87348FFC4C && \
     mkdir -p /tmp/build && \
     cd /tmp/build && \
