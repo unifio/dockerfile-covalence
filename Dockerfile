@@ -10,7 +10,7 @@ ARG GEMFURY_SOURCE_URL_TOKEN
 RUN mkdir -p /usr/local/external_bins && \
 
     # docker base goodies
-    apk add --no-cache --update ca-certificates gnupg openssl git wget unzip lxc iptables && \
+    apk add --no-cache --update ca-certificates gnupg openssl git mercurial wget unzip device-mapper lxc iptables && \
     gpg --recv-keys 91A6E7F85D05C65630BEF18951852D87348FFC4C && \
     mkdir -p /tmp/build && \
     cd /tmp/build && \
@@ -32,14 +32,12 @@ RUN mkdir -p /usr/local/external_bins && \
     # Cleanup
     cd /tmp && \
     rm -rf /tmp/build && \
-    rm -rf /root/.gnupg && \
-    apk del gnupg unzip wget git
+    rm -rf /root/.gnupg
 
 ENV DOCKER_VERSION 1.9.1
 ENV DOCKER_SHA256 6a095ccfd095b1283420563bd315263fa40015f1cee265de023efef144c7e52d
 
-RUN apk add --no-cache --update wget && \
-    mkdir -p /tmp/build && \
+RUN mkdir -p /tmp/build && \
     cd /tmp/build && \
     wget -q -O docker.tgz "https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION}.tgz" && \
     echo "${DOCKER_SHA256} *docker.tgz" | sha256sum -c - && \
@@ -49,8 +47,7 @@ RUN apk add --no-cache --update wget && \
     # Cleanup
     cd /tmp && \
     rm -rf /tmp/build && \
-    rm -rf /root/.gnupg && \
-    apk del wget
+    rm -rf /root/.gnupg
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
