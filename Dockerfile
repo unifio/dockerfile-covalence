@@ -1,4 +1,4 @@
-FROM ruby:alpine
+FROM ruby:2.4-alpine
 MAINTAINER "Unif.io, Inc. <support@unif.io>"
 
 # This is the release of https://github.com/hashicorp/docker-base to pull in order
