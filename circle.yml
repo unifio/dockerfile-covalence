@@ -2,8 +2,7 @@ machine:
   service:
     - docker
   environment:
-    COVALENCE_CMD: "docker run -v /home/ubuntu/.aws:/root/.aws -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/dockerfile-covalence/uat:/home/ubuntu/dockerfile-covalence/uat -w /home/ubuntu/dockerfile-covalence/uat"
-    COVALENCE_VERSION: 0.6.0
+    COVALENCE_VERSION: 0.6.1
     DOCKER_IMAGE: 'unifio/covalence'
     TERRAFORM_VERSION: 0.9.2
   services:
