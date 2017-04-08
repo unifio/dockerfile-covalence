@@ -1,10 +1,11 @@
 machine:
+  service:
+    - docker
   environment:
     COVALENCE_CMD: "docker run -v /home/ubuntu/.aws:/root/.aws -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/dockerfile-covalence/uat:/home/ubuntu/dockerfile-covalence/uat -w /home/ubuntu/dockerfile-covalence/uat"
-    COVALENCE_VERSION: 0.5.3
-    TERRAFORM_CMD: "docker run -v /home/ubuntu/.aws:/home/user/.aws -e LOCAL_USER_ID=1000 -e CHECKPOINT_DISABLE=1"
-    TERRAFORM_IMG: unifio/terraform:latest
+    COVALENCE_VERSION: 0.6.0
     DOCKER_IMAGE: 'unifio/covalence'
+    TERRAFORM_VERSION: 0.9.2
   services:
     - docker
 
@@ -19,12 +20,20 @@ dependencies:
     - docker save ${DOCKER_IMAGE} > ~/docker/image.tar
 
 test:
-  pre:
-    - docker pull $TERRAFORM_IMG
   override:
-    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG -e COVALENCE_TEST_ENVS=uat ${DOCKER_IMAGE} rake ci"
-    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG ${DOCKER_IMAGE} rake uat:apply"
-    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG ${DOCKER_IMAGE} rake uat:destroy"
+    - |
+      docker run -v /home/ubuntu/.aws:/root/.aws \
+                 -v /home/ubuntu/dockerfile-covalence/uat:/home/ubuntu/dockerfile-covalence/uat \
+                 -w /home/ubuntu/dockerfile-covalence/uat \
+                 -e COVALENCE_TEST_ENVS=uat \
+                 --entrypoint=/bin/sh \
+                 ${DOCKER_IMAGE} -c "
+                 apk add --no-cache --update unzip && \
+                 wget -q \"https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip\" && \
+                 unzip -d /usr/local/bin terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+                 rake ci && \
+                 rake uat:apply && \
+                 rake uat:destroy"
 
 deployment:
   hub:
