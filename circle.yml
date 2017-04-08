@@ -2,8 +2,9 @@ machine:
   environment:
     COVALENCE_CMD: "docker run -v /home/ubuntu/.aws:/root/.aws -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/dockerfile-covalence/uat:/home/ubuntu/dockerfile-covalence/uat -w /home/ubuntu/dockerfile-covalence/uat"
     COVALENCE_VERSION: 0.5.3
-    TERRAFORM_CMD: "docker run -v /home/ubuntu/.aws:/home/user/.aws -e LOCAL_USER_ID=1000"
+    TERRAFORM_CMD: "docker run -v /home/ubuntu/.aws:/home/user/.aws -e LOCAL_USER_ID=1000 -e CHECKPOINT_DISABLE=1"
     TERRAFORM_IMG: unifio/terraform:latest
+    DOCKER_IMAGE: 'unifio/covalence'
   services:
     - docker
 
@@ -13,22 +14,22 @@ dependencies:
   override:
     - docker info
     - if [[ -e ~/docker/image.tar ]]; then docker load --input ~/docker/image.tar; fi
-    - docker build --build-arg GEMFURY_SOURCE_URL_TOKEN=$GEMFURY_SOURCE_URL_TOKEN -t unifio/covalence .
+    - docker build --rm=false --build-arg GEMFURY_SOURCE_URL_TOKEN=$GEMFURY_SOURCE_URL_TOKEN -t ${DOCKER_IMAGE} .
     - mkdir -p ~/docker
-    - docker save unifio/covalence > ~/docker/image.tar
+    - docker save ${DOCKER_IMAGE} > ~/docker/image.tar
 
 test:
   pre:
     - docker pull $TERRAFORM_IMG
   override:
-    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG -e COVALENCE_TEST_ENVS=uat unifio/covalence rake ci"
-    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG unifio/covalence rake uat:apply"
-    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG unifio/covalence rake uat:destroy"
+    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG -e COVALENCE_TEST_ENVS=uat ${DOCKER_IMAGE} rake ci"
+    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG ${DOCKER_IMAGE} rake uat:apply"
+    - "$COVALENCE_CMD -e TERRAFORM_CMD=\"$TERRAFORM_CMD\" -e TERRAFORM_IMG=$TERRAFORM_IMG ${DOCKER_IMAGE} rake uat:destroy"
 
 deployment:
   hub:
     branch: master
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-      - docker tag -f `docker images | grep -E 'unifio/covalence' | awk '{print $3}'` unifio/covalence:${COVALENCE_VERSION}
-      - docker push unifio/covalence
+      - docker tag -f `docker images | grep -E "${DOCKER_IMAGE}" | awk '{print $3}'` ${DOCKER_IMAGE}:${COVALENCE_VERSION}
+      - docker push ${DOCKER_IMAGE}
