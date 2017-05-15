@@ -1,6 +1,6 @@
 ---
 # VPC Stack
-vpc::vars:
+terraform::vpc::vars:
   enable_dns: 'false'
   enable_hostnames: 'false'
   region: "%{hiera('region')}"
@@ -9,7 +9,7 @@ vpc::vars:
   vpc_cidr: '172.16.0.0/21'
 
 ## Module & State
-vpc::module: 'vpc'
+vpc::module: 'terraform/vpc'
 vpc::state:
   - s3:
       bucket: "%{hiera('s3_state_bucket')}"
