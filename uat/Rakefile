@@ -5,7 +5,6 @@ require 'dotenv'
 Dotenv.load
 
 require 'covalence/environment_tasks'
-require 'covalence/packer_tasks'
 require 'covalence/spec_tasks'
 
 task :serverspec => 'serverspec:all'
