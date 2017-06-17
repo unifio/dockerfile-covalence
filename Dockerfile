@@ -34,21 +34,6 @@ RUN mkdir -p /usr/local/external_bins && \
     rm -rf /tmp/build && \
     rm -rf /root/.gnupg
 
-ENV DOCKER_VERSION 1.9.1
-ENV DOCKER_SHA256 6a095ccfd095b1283420563bd315263fa40015f1cee265de023efef144c7e52d
-
-RUN mkdir -p /tmp/build && \
-    cd /tmp/build && \
-    wget -q -O docker.tgz "https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION}.tgz" && \
-    echo "${DOCKER_SHA256} *docker.tgz" | sha256sum -c - && \
-    tar -C / -xzvf docker.tgz && \
-    docker -v && \
-
-    # Cleanup
-    cd /tmp && \
-    rm -rf /tmp/build && \
-    rm -rf /root/.gnupg
-
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh", "--"]
