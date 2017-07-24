@@ -2,9 +2,9 @@ machine:
   service:
     - docker
   environment:
-    COVALENCE_VERSION: 0.7.2
+    COVALENCE_VERSION: 0.7.3
     DOCKER_IMAGE: 'unifio/covalence'
-    TERRAFORM_VERSION: 0.9.8
+    TERRAFORM_VERSION: 0.9.11
   services:
     - docker
 
