@@ -1,11 +1,11 @@
 common: &common
-  working_directory: ~/dockerfile-ci
+  working_directory: ~/dockerfile-covalence
   docker:
     - image: alpine:3.7
   environment:
     COVALENCE_VERSION: 0.8.2
-    DOCKER_IMAGE: 'unifio/covalence'
-    TERRAFORM_VERSION: 0.10.6
+    COVALENCE_REGISTRY: 'unifio/covalence'
+    TERRAFORM_VERSION: 0.11.8
 
 version: 2
 jobs:
@@ -18,37 +18,63 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            docker info
-            if [[ -e ~/docker/image.tar ]]; then docker load --input ~/docker/image.tar; fi
-            docker build --rm=false --build-arg GEMFURY_SOURCE_URL_TOKEN=$GEMFURY_SOURCE_URL_TOKEN -t ${DOCKER_IMAGE} .
-            mkdir -p ~/docker
-            docker save ${DOCKER_IMAGE} > ~/docker/image.tar
-
+            apk add --no-cache \
+              curl \
+              docker
+      - restore_cache:
+          keys:
+            - dock2-cov-layer-cache-{{ .Branch }}
+      - run:
+          name: Load Docker image layer cache
+          command: |
+            set +o pipefail
+            docker load < /caches/cov.tar | true
+            docker images
+      - run:
+          name: Build Covalence image
+          command: |
+            docker build --rm=false --build-arg GEMFURY_SOURCE_URL_TOKEN=${GEMFURY_SOURCE_URL_TOKEN} -t ${COVALENCE_REGISTRY}:${CIRCLE_BUILD_NUM}-${COVALENCE_VERSION} .
       - run:
           name: Execute acceptance test
           command: |
-            docker run -v /home/ubuntu/.aws:/root/.aws \
-                 -v /home/ubuntu/dockerfile-covalence/uat:/home/ubuntu/dockerfile-covalence/uat \
-                 -w /home/ubuntu/dockerfile-covalence/uat \
-                 -e COVALENCE_TEST_ENVS=uat \
-                 --entrypoint=/bin/sh \
-                 ${DOCKER_IMAGE} -c "
-                 apk add --no-cache --update unzip && \
-                 wget -q \"https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip\" && \
-                 unzip -d /usr/local/bin terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
-                 rake ci && \
-                 rake uat:apply && \
-                 rake uat:destroy"
-
+            export AWS_ACCESS_KEY_ID="$(echo "${AWS_ACCESS_KEY_ID}" | tr -d '[:space:]')"
+            export AWS_SECRET_ACCESS_KEY="$(echo "${AWS_SECRET_ACCESS_KEY}" | tr -d '[:space:]')"
+            docker run -i --name uat --entrypoint /bin/sh \
+              -e CHECKPOINT_DISABLE=1 \
+              -e COVALENCE_TEST_ENVS=uat \
+              -e AWS_DEFAULT_REGION=us-east-1 \
+              -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+              ${COVALENCE_REGISTRY}:${CIRCLE_BUILD_NUM}-${COVALENCE_VERSION} &
+            sleep 10
+            docker start uat
+            docker cp uat/. uat:/data
+            docker exec uat sh -c \
+               "apk add --no-cache --update unzip && \
+                wget -q \"https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip\" && \
+              unzip -d /usr/local/bin terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+            docker exec uat sh -c 'rake ci'
+            docker exec uat sh -c 'rake uat:apply'
+            docker exec uat sh -c 'rake uat:destroy'
+      - run:
+          name: Save Docker image layer cache
+          command: |
+            mkdir -p /caches /workspace
+            docker images -a
+            docker save $(docker images -aq) > /caches/cov.tar
+            docker save ${COVALENCE_REGISTRY} > /workspace/cov.tar
+      - save_cache:
+          key: dock2-cov-layer-cache-{{ .Branch }}-{{ checksum "/caches/cov.tar" }}
+          paths:
+            - /caches/cov.tar
       - deploy:
           name: Register Covalence image
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag -f `docker images | grep -E "${DOCKER_IMAGE}" | awk '{print $3}'` ${DOCKER_IMAGE}:${COVALENCE_VERSION}
-              docker push ${DOCKER_IMAGE}
+              docker login -u $DOCKER_USER -p $DOCKER_PASS
+              docker tag ${COVALENCE_REGISTRY}:${CIRCLE_BUILD_NUM}-${COVALENCE_VERSION} ${COVALENCE_REGISTRY}:${COVALENCE_VERSION}
+              docker push ${COVALENCE_REGISTRY}
             fi
-
 workflows:
   version: 2
   ci_container_pipeline:
