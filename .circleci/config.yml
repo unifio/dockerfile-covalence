@@ -3,7 +3,7 @@ common: &common
   docker:
     - image: alpine:3.7
   environment:
-    COVALENCE_VERSION: 0.8.2
+    COVALENCE_VERSION: 0.8.3
     COVALENCE_REGISTRY: 'unifio/covalence'
     TERRAFORM_VERSION: 0.11.8
 
